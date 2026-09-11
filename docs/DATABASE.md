@@ -21,6 +21,9 @@ dommage (`create ... if not exists`, `drop policy if exists`, `on conflict`).
 | `0010_security_hardening` | Extensions hors de `public`, `search_path` figé, droits retirés |
 | `0011_grants` | Droits explicites par rôle (portabilité hors Supabase hébergé) |
 | `0012_fix_is_admin_grant` | Correctif : `anon` doit pouvoir exécuter `is_admin()` |
+| `0013_cart_line_image` | Correctif : vignette du panier pour toutes les tailles d'un coloris |
+| `0014_profile_role_guard` | **Sécurité** : un client ne peut plus se promouvoir administrateur |
+| `0015_empty_cart_costs_nothing` | Correctif : un panier sans ligne achetable ne facture plus la livraison |
 
 ### Application
 
@@ -94,6 +97,36 @@ create policy products_public_read on public.products
 create policy orders_select_own on public.orders
   for select using (profile_id = auth.uid() or public.is_admin());
 ```
+
+### RLS filtre des lignes, pas des colonnes
+
+C'est la nuance qui a produit la seule faille réelle de ce projet. La politique
+« un client modifie son propre profil » dit *quelle ligne* il peut écrire, pas
+*quelles colonnes*. Un client authentifié pouvait donc écrire la sienne :
+
+```sql
+update public.profiles set role = 'admin' where id = auth.uid();
+```
+
+La ligne lui appartient : RLS l'autorise. Deux couches indépendantes ferment la
+porte, parce qu'une seule est une ligne de défense unique :
+
+```sql
+-- 1. Droits au niveau colonne : `role` n'est tout simplement plus accessible.
+revoke update on public.profiles from authenticated;
+grant update (first_name, last_name, phone, accepts_marketing)
+  on public.profiles to authenticated;
+
+-- 2. Déclencheur : même si un droit était re-accordé par erreur, l'écriture
+--    d'un changement de rôle par `anon` ou `authenticated` lève une exception.
+create trigger profiles_guard_role
+  before update of role on public.profiles
+  for each row execute function public.guard_profile_role();
+```
+
+Les rôles se changent avec le `service_role` ou directement en SQL. La migration
+est `0014`, et l'assertion 3 de `tests/db/security.sql` la vérifie sous un vrai
+rôle `authenticated`.
 
 ### Ce qui n'est pas lisible publiquement
 

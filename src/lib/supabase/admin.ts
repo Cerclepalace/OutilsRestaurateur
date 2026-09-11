@@ -7,8 +7,15 @@ import type { Database } from '@/types/database';
 /**
  * Service-role client. Bypasses Row Level Security.
  *
- * Exactly one caller in the app: the Stripe webhook, which has no user session
- * and must be able to settle an order. Never import this into a component.
+ * Two callers, both route handlers acting for a shopper who has no session of
+ * their own:
+ *
+ *   - the Stripe webhook, which settles an order with no user attached at all;
+ *   - the checkout route, which stamps the Stripe session id onto the order it
+ *     just created, so the webhook can find it even if Stripe trims metadata.
+ *
+ * Both write to a single, already-identified order. Never import this into a
+ * component, and never widen it to a read that a user-scoped client could do.
  */
 export function createAdminClient() {
   return createClient<Database>(

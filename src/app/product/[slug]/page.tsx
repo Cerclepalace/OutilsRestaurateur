@@ -9,7 +9,9 @@ import { SizeGuideTable } from '@/features/product/size-guide-table';
 import { ProductGrid } from '@/features/catalog/product-grid';
 import { Accordion } from '@/components/ui/accordion';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
+import { getFreeShippingThreshold } from '@/services/settings';
 import { clientEnv } from '@/lib/env';
+import { formatPrice } from '@/lib/format';
 
 export const revalidate = 120;
 
@@ -43,9 +45,10 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [similar, completeTheLook] = await Promise.all([
+  const [similar, completeTheLook, freeShippingFrom] = await Promise.all([
     getRecommendations(product.id, 'similar', 4),
     getRecommendations(product.id, 'complete_the_look', 4),
+    getFreeShippingThreshold('FR'),
   ]);
 
   const lowest = Math.min(...product.variants.map((v) => v.price_cents), product.price_cents);
@@ -152,7 +155,16 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
 
               <Accordion title="Livraison & retours">
                 <div className="flex flex-col gap-2">
-                  <p>France métropolitaine : 2 à 4 jours ouvrés, offerte dès 200 € d&apos;achat.</p>
+                  {/* The threshold is a commercial setting, not copy: it is read
+                      from `shipping_methods` like the cart and the checkout, so
+                      changing it in the admin changes it everywhere at once. */}
+                  <p>
+                    France métropolitaine : 2 à 4 jours ouvrés
+                    {freeShippingFrom !== null
+                      ? `, offerte dès ${formatPrice(freeShippingFrom)} d'achat`
+                      : ''}
+                    .
+                  </p>
                   <p>Retours acceptés sous 14 jours, pièce non portée.</p>
                   <Link href="/livraison-et-retours" className="bobo-link self-start text-ink">
                     Tout savoir

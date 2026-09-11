@@ -65,10 +65,13 @@ export const discounts = [
 export const settings = [
   {
     key: 'announcement',
-    description: "Bandeau haut de page. Mettre enabled à false pour le masquer.",
+    description:
+      'Bandeau haut de page. Mettre enabled à false pour le masquer. ' +
+      "Le jeton {seuil_franco} est remplacé par le seuil de franco réellement appliqué, " +
+      'pour que le bandeau ne puisse pas annoncer un seuil que le paiement ne pratique pas.',
     value: {
       enabled: true,
-      message: "Livraison offerte dès 200 € d'achat en France métropolitaine",
+      message: "Livraison offerte dès {seuil_franco} d'achat en France métropolitaine",
       href: '/engagements',
     },
   },

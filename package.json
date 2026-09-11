@@ -13,6 +13,8 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:db": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f tests/db/security.sql",
+    "test:race": "bash tests/db/race.sh",
     "seed": "node scripts/seed.mjs",
     "seed:sql": "node scripts/seed.mjs --sql",
     "placeholders": "node scripts/generate-placeholders.mjs",

@@ -105,7 +105,11 @@ test.describe('catalogue', () => {
     page,
   }) => {
     await page.goto('/boutique?min=9000&max=9999');
-    await expect(page.getByText(/rien pour l'instant/i)).toBeVisible();
+    // Role, not text: while React streams, a second copy of the markup sits in
+    // a `[hidden]` staging node, so `getByText` resolves to two elements and
+    // trips strict mode before it ever retries. `[hidden]` subtrees are out of
+    // the accessibility tree, so the role engine only ever sees the live one.
+    await expect(page.getByRole('heading', { name: /rien pour l'instant/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /voir toute la boutique/i })).toBeVisible();
   });
 });
@@ -135,7 +139,12 @@ test.describe('search', () => {
 
   test('a query with no match offers a way out', async ({ page }) => {
     await page.goto('/search?q=zzzzzz');
-    await expect(page.getByText(/aucune pièce ne correspond/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /rien pour l'instant/i })).toBeVisible();
+    // The message has to name the query back, so this one is a text match; it
+    // is filtered to the visible copy for the streaming reason above.
+    await expect(
+      page.getByText(/aucune pièce ne correspond/i).filter({ visible: true }),
+    ).toBeVisible();
   });
 });
 

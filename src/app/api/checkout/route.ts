@@ -5,6 +5,7 @@ import { getStripe, isStripeConfigured } from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { checkoutSchema } from '@/lib/validation';
 import { clientEnv } from '@/lib/env';
+import { formatPrice } from '@/lib/format';
 
 /**
  * Checkout.
@@ -120,12 +121,18 @@ export async function POST(request: Request) {
   }
 }
 
+/**
+ * The line Stripe shows on its own checkout page. Purely descriptive — the sum
+ * actually charged is `unit_amount`, which stays in integer cents — but it has
+ * to read like the rest of the site, so it goes through the same formatter
+ * rather than rolling its own division.
+ */
 function describeOrder(order: { subtotal_cents: number; shipping_cents: number; discount_cents: number }) {
-  const parts = [`Sous-total ${(order.subtotal_cents / 100).toFixed(2)} €`];
-  if (order.discount_cents > 0) parts.push(`Remise -${(order.discount_cents / 100).toFixed(2)} €`);
+  const parts = [`Sous-total ${formatPrice(order.subtotal_cents)}`];
+  if (order.discount_cents > 0) parts.push(`Remise -${formatPrice(order.discount_cents)}`);
   parts.push(
     order.shipping_cents > 0
-      ? `Livraison ${(order.shipping_cents / 100).toFixed(2)} €`
+      ? `Livraison ${formatPrice(order.shipping_cents)}`
       : 'Livraison offerte',
   );
   return parts.join(' · ');

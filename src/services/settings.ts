@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { createPublicClient } from '@/lib/supabase/public';
+import { formatPrice } from '@/lib/format';
 import type { ShippingMethod } from '@/types/catalog';
 
 /**
@@ -33,9 +34,31 @@ async function readSetting<T>(key: string, fallback: T): Promise<T> {
   return data.value as T;
 }
 
+/**
+ * Token the announcement copy can use to quote the live free-shipping
+ * threshold, e.g. "Livraison offerte dès {seuil_franco} d'achat".
+ *
+ * The banner is merchant-written prose, so it stays editable — but a number
+ * typed into it would go stale the moment the threshold changes in the admin,
+ * and a banner advertising a condition the checkout does not honour is a
+ * commercial problem, not a cosmetic one. A message without the token is
+ * rendered exactly as written.
+ */
+const FREE_SHIPPING_TOKEN = '{seuil_franco}';
+
 export async function getAnnouncement(): Promise<Announcement | null> {
   const value = await readSetting<Announcement | null>('announcement', null);
-  return value?.enabled ? value : null;
+  if (!value?.enabled) return null;
+  if (!value.message.includes(FREE_SHIPPING_TOKEN)) return value;
+
+  const threshold = await getFreeShippingThreshold('FR');
+  return {
+    ...value,
+    message: value.message.replaceAll(
+      FREE_SHIPPING_TOKEN,
+      threshold === null ? '' : formatPrice(threshold),
+    ),
+  };
 }
 
 export async function getCommitments(): Promise<Commitment[]> {
