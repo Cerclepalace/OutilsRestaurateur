@@ -176,6 +176,12 @@ test.describe('cart', () => {
     await expect(drawer.getByText('Gauthier')).toBeVisible();
     await expect(drawer.getByRole('link', { name: /passer commande/i })).toBeVisible();
 
+    // Regression: images are anchored to a colourway's first variant, so a line
+    // for any other size once resolved to no thumbnail at all.
+    const thumbnail = drawer.locator('img').first();
+    await expect(thumbnail).toBeVisible();
+    expect(await thumbnail.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+
     await page.reload();
     await page.goto('/cart');
     await expect(page.getByRole('heading', { name: 'Panier', level: 1 })).toBeVisible();
